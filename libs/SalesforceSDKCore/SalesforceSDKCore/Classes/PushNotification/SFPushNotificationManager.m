@@ -36,7 +36,11 @@
 
 static NSString* const kSFDeviceToken = @"deviceToken";
 static NSString* const kSFDeviceSalesforceId = @"deviceSalesforceId";
+<<<<<<< HEAD
 static NSString* const kSFPushNotificationEndPoint = @"services/data/v43.0/sobjects/MobilePushServiceDevice";
+=======
+static NSString* const kSFPushNotificationEndPoint = @"services/data/v42.0/sobjects/MobilePushServiceDevice";
+>>>>>>> 5b2450512bcdcbc422d2e5e9a98916adb2b5fa72
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-const-variable"
@@ -189,11 +193,15 @@ static NSString * const kSFAppFeaturePushNotifications = @"PN";
     
     // Body
     NSString *bundleId = [NSBundle mainBundle].bundleIdentifier;
+<<<<<<< HEAD
     NSString *rsaPublicKey = [self getRSAPublicKey];
     NSDictionary *bodyDict = @{@"ConnectionToken":_deviceToken, @"ServiceType":@"Apple", @"ApplicationBundle":bundleId};
     if (rsaPublicKey != nil) {
         bodyDict = @{@"ConnectionToken":_deviceToken, @"ServiceType":@"Apple", @"ApplicationBundle":bundleId, @"RsaPublicKey":rsaPublicKey};
     }
+=======
+    NSDictionary* bodyDict = @{@"ConnectionToken":_deviceToken, @"ServiceType":@"Apple", @"ApplicationBundle":bundleId};
+>>>>>>> 5b2450512bcdcbc422d2e5e9a98916adb2b5fa72
     [request setHTTPBody:[SFJsonUtils JSONDataRepresentation:bodyDict]];
     
     // Send

@@ -254,11 +254,8 @@ static NSString *const  kOptionsClientKey          = @"clientIdentifier";
 
 - (BOOL)handleAdvancedAuthenticationResponse:(NSURL *)appUrlResponse options:(nonnull NSDictionary *)options{
      NSAssert(self.useLegacyAuthenticationManager==false, kSFIncompatibleAuthError);
-    
-    [SFSDKCoreLogger i:[self class] format:@"handleAdvancedAuthenticationResponse %@",[appUrlResponse description]];
-    
+    [SFSDKCoreLogger d:[self class] format:@"handleAdvancedAuthenticationResponse %@",[appUrlResponse description]];
     BOOL result = [[SFSDKURLHandlerManager sharedInstance] canHandleRequest:appUrlResponse options:options];
-    
     if (result) {
         result = [[SFSDKURLHandlerManager sharedInstance] processRequest:appUrlResponse  options:options];
     }
@@ -280,7 +277,7 @@ static NSString *const  kOptionsClientKey          = @"clientIdentifier";
 - (BOOL)authenticateWithCompletion:(SFUserAccountManagerSuccessCallbackBlock)completionBlock failure:(SFUserAccountManagerFailureCallbackBlock)failureBlock credentials:(SFOAuthCredentials *)credentials{
     NSAssert(self.useLegacyAuthenticationManager==false, kSFIncompatibleAuthError);
     [SFSDKWebViewStateManager removeSession];
-    SFSDKOAuthClient *client = [self fetchOAuthClient:credentials completion:completionBlock failure:failureBlock];
+    SFSDKOAuthClient *client = [self fetchOAuthClient:credentials cached:NO completion:completionBlock failure:failureBlock];
     [[SFSDKOAuthClientCache sharedInstance] addClient:client];
     return [client refreshCredentials];
 }
@@ -313,21 +310,18 @@ static NSString *const  kOptionsClientKey          = @"clientIdentifier";
     }
     
     BOOL isCurrentUser = [user isEqual:self.currentUser];
-    [SFSDKCoreLogger i:[self class] format:@"Logging out user '%@'.", user.userName];
+    [SFSDKCoreLogger d:[self class] format:@"Logging out user '%@'.", user.userName];
     NSDictionary *userInfo = @{ kSFNotificationUserInfoAccountKey : user };
     [[NSNotificationCenter defaultCenter]  postNotificationName:kSFNotificationUserWillLogout
                                                         object:self
                                                       userInfo:userInfo];
     SFSDKOAuthClient *client = [self fetchOAuthClient:user.credentials completion:nil failure:nil];
-    
     [self deleteAccountForUser:user error:nil];
     [client cancelAuthentication:NO];
     [client revokeCredentials];
-
     if ([SFPushNotificationManager sharedInstance].deviceSalesforceId) {
         [[SFPushNotificationManager sharedInstance] unregisterSalesforceNotifications:user];
     }
-
     if (isCurrentUser) {
         self.currentUser = nil;
     }
@@ -1009,7 +1003,7 @@ static NSString *const  kOptionsClientKey          = @"clientIdentifier";
                 [self didChangeValueForKey:@"currentUser"];
                 userChanged = YES;
             } else {
-                [SFSDKCoreLogger e:[self class] format:@"Cannot set the currentUser as %@. Add the account to the SFAccountManager before making this call.", [user userName]];
+                [SFSDKCoreLogger e:[self class] message:@"Cannot set the currentUser. Add the account to the SFAccountManager before making this call."];
             }
         }
         [_accountsLock unlock];
@@ -1218,10 +1212,14 @@ static NSString *const  kOptionsClientKey          = @"clientIdentifier";
 }
 
 - (SFSDKOAuthClient *)fetchOAuthClient:(SFOAuthCredentials *)credentials completion:(SFUserAccountManagerSuccessCallbackBlock)completionBlock failure:(SFUserAccountManagerFailureCallbackBlock)failureBlock {
+    return [self fetchOAuthClient:credentials cached:YES completion:completionBlock failure:failureBlock];
+}
+
+- (SFSDKOAuthClient *)fetchOAuthClient:(SFOAuthCredentials *)credentials cached:(BOOL)cachedClient completion:(SFUserAccountManagerSuccessCallbackBlock)completionBlock failure:(SFUserAccountManagerFailureCallbackBlock)failureBlock {
     
     NSString *key = [SFSDKOAuthClientCache keyFromCredentials:credentials];
     SFSDKOAuthClient *client = [[SFSDKOAuthClientCache sharedInstance] clientForKey:key];
-    if (!client) {
+    if (!cachedClient || !client) {
         __weak typeof(self) weakSelf = self;
         client = [SFSDKOAuthClient clientWithCredentials:credentials configBlock:^(SFSDKOAuthClientConfig *config) {
             __strong typeof(self) strongSelf = weakSelf;
