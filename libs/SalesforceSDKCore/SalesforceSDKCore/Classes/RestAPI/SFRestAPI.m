@@ -98,10 +98,12 @@ __strong static NSDateFormatter *httpDateFormatter = nil;
 
 - (void)cancelAllRequests {
     @synchronized(self) {
+        NSMutableSet activeRequestsCopy = [_activeRequests mutableCopy];
         for (SFRestRequest *request in _activeRequests) {
             [request cancel];
         }
-        [_activeRequests removeAllObjects];
+        [activeRequestsCopy removeAllObjects];
+        _activeRequests = activeRequestsCopy;
     }
 }
 
